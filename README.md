@@ -94,3 +94,4 @@ docker mcp tools call execute_sql 'query=SELECT COUNT(*) FROM profiles'
 ## License
 
 MIT
+
