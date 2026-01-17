@@ -27,6 +27,21 @@ function getSupabaseClient(): SupabaseClient {
   return supabase;
 }
 
+// Helper to parse JSON strings or return object as-is
+function parseJsonArg<T>(arg: unknown, defaultValue: T): T {
+  if (arg === undefined || arg === null) {
+    return defaultValue;
+  }
+  if (typeof arg === "string") {
+    try {
+      return JSON.parse(arg) as T;
+    } catch {
+      return defaultValue;
+    }
+  }
+  return arg as T;
+}
+
 // Tool definitions
 const tools: Tool[] = [
   {
@@ -313,6 +328,13 @@ async function queryTable(args: {
     offset = 0,
   } = args;
 
+  if (!table || table.trim() === "") {
+    return JSON.stringify({
+      error: "Missing table name",
+      message: "The 'table' parameter is required",
+    }, null, 2);
+  }
+
   let query = client.from(table).select(columns);
 
   // Apply filters
@@ -331,7 +353,10 @@ async function queryTable(args: {
   const { data, error } = await query;
 
   if (error) {
-    throw new Error(`Query failed: ${error.message}`);
+    return JSON.stringify({
+      error: "Query failed",
+      message: error.message,
+    }, null, 2);
   }
 
   return JSON.stringify(
@@ -350,13 +375,30 @@ async function insertRow(
 ): Promise<string> {
   const client = getSupabaseClient();
 
+  if (!table || table.trim() === "") {
+    return JSON.stringify({
+      error: "Missing table name",
+      message: "The 'table' parameter is required",
+    }, null, 2);
+  }
+
+  if (!data || Object.keys(data).length === 0) {
+    return JSON.stringify({
+      error: "Missing data",
+      message: "The 'data' parameter is required and must be a non-empty object",
+    }, null, 2);
+  }
+
   const { data: result, error } = await client
     .from(table)
     .insert(data)
     .select();
 
   if (error) {
-    throw new Error(`Insert failed: ${error.message}`);
+    return JSON.stringify({
+      error: "Insert failed",
+      message: error.message,
+    }, null, 2);
   }
 
   return JSON.stringify(
@@ -376,6 +418,20 @@ async function updateRows(
 ): Promise<string> {
   const client = getSupabaseClient();
 
+  if (!table || table.trim() === "") {
+    return JSON.stringify({
+      error: "Missing table name",
+      message: "The 'table' parameter is required",
+    }, null, 2);
+  }
+
+  if (!filters || Object.keys(filters).length === 0) {
+    return JSON.stringify({
+      error: "Missing filters",
+      message: "The 'filters' parameter is required to prevent accidental full-table updates",
+    }, null, 2);
+  }
+
   let query = client.from(table).update(data);
 
   // Apply filters
@@ -386,7 +442,10 @@ async function updateRows(
   const { data: result, error } = await query.select();
 
   if (error) {
-    throw new Error(`Update failed: ${error.message}`);
+    return JSON.stringify({
+      error: "Update failed",
+      message: error.message,
+    }, null, 2);
   }
 
   return JSON.stringify(
@@ -405,6 +464,20 @@ async function deleteRows(
 ): Promise<string> {
   const client = getSupabaseClient();
 
+  if (!table || table.trim() === "") {
+    return JSON.stringify({
+      error: "Missing table name",
+      message: "The 'table' parameter is required",
+    }, null, 2);
+  }
+
+  if (!filters || Object.keys(filters).length === 0) {
+    return JSON.stringify({
+      error: "Missing filters",
+      message: "The 'filters' parameter is required to prevent accidental full-table deletes",
+    }, null, 2);
+  }
+
   let query = client.from(table).delete();
 
   // Apply filters
@@ -415,7 +488,10 @@ async function deleteRows(
   const { data: result, error } = await query.select();
 
   if (error) {
-    throw new Error(`Delete failed: ${error.message}`);
+    return JSON.stringify({
+      error: "Delete failed",
+      message: error.message,
+    }, null, 2);
   }
 
   return JSON.stringify(
@@ -521,28 +597,36 @@ async function main() {
           break;
 
         case "query_table":
-          result = await queryTable(args as any);
+          result = await queryTable({
+            table: args?.table as string,
+            columns: args?.columns as string,
+            filters: parseJsonArg<Record<string, any>>(args?.filters, {}),
+            order_by: args?.order_by as string,
+            ascending: args?.ascending as boolean,
+            limit: args?.limit as number,
+            offset: args?.offset as number,
+          });
           break;
 
         case "insert_row":
           result = await insertRow(
             args?.table as string,
-            args?.data as Record<string, any>
+            parseJsonArg<Record<string, any>>(args?.data, {})
           );
           break;
 
         case "update_rows":
           result = await updateRows(
             args?.table as string,
-            args?.data as Record<string, any>,
-            args?.filters as Record<string, any>
+            parseJsonArg<Record<string, any>>(args?.data, {}),
+            parseJsonArg<Record<string, any>>(args?.filters, {})
           );
           break;
 
         case "delete_rows":
           result = await deleteRows(
             args?.table as string,
-            args?.filters as Record<string, any>
+            parseJsonArg<Record<string, any>>(args?.filters, {})
           );
           break;
 
