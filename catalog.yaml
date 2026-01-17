@@ -1,0 +1,47 @@
+registry:
+  supabase:
+    title: Supabase Database
+    description: Connect to Supabase databases with full read/write capabilities. Query tables, insert/update/delete rows, execute SQL, and manage storage buckets.
+    type: server
+    image: supabase-mcp-server:latest
+    dateAdded: "2026-01-17T00:00:00Z"
+    icon: https://avatars.githubusercontent.com/u/54469796?s=200&v=4
+    ref: ""
+    readme: ""
+    source: ""
+    upstream: ""
+    config:
+      - name: supabase
+        description: Configure connection to your Supabase project
+        type: object
+        properties:
+          url:
+            type: string
+            description: Your Supabase project URL (e.g., https://xxxxx.supabase.co)
+          service_key:
+            type: string
+            description: Supabase service role key (found in Project Settings > API)
+    env:
+      - name: SUPABASE_URL
+        value: "{{supabase.url}}"
+      - name: SUPABASE_SERVICE_KEY
+        value: "{{supabase.service_key}}"
+    tools:
+      - name: list_tables
+      - name: describe_table
+      - name: query_table
+      - name: insert_row
+      - name: update_rows
+      - name: delete_rows
+      - name: execute_sql
+      - name: list_buckets
+      - name: list_files
+    prompts: 0
+    resources: {}
+    metadata:
+      category: database
+      owner: local
+      tags:
+        - supabase
+        - database
+        - postgres
